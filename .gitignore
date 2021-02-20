@@ -109,6 +109,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+conf/.NEREL
 
 # Spyder project settings
 .spyderproject
@@ -127,3 +128,29 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+.DS_Store
+data/test-v1.3/de/HIPE-data-v1.3-test-de.tsv
+data/test-v1.3/en/HIPE-data-v1.3-test-en.tsv
+data/test-v1.3/fr/HIPE-data-v1.3-test-fr.tsv
+data/training-v1.2/de/HIPE-data-v1.2-dev-de.tsv
+data/training-v1.2/de/HIPE-data-v1.2-train-de.tsv
+data/training-v1.2/en/HIPE-data-v1.2-dev-en.tsv
+data/training-v1.2/fr/HIPE-data-v1.2-dev-fr.tsv
+data/training-v1.2/fr/HIPE-data-v1.2-train-fr.tsv
+.vscode
+
+#logs
+logs
+
+#results
+results
+
+#data
+data
+*.tsv
+
+#wandb
+wandb
+
+#environment
+author
