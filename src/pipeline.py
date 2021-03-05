@@ -1,5 +1,4 @@
-from sklearn.pipeline import Pipeline
-from sklearn.pipeline import FeatureUnion
+from sklearn.pipeline import Pipeline,FeatureUnion
 from sklearn.preprocessing import StandardScaler
 from sklearn.feature_extraction.text import TfidfVectorizer
 
@@ -11,9 +10,12 @@ punt_vocab = string.punctuation
 
 
 def define_pipeline():
-    estimators = [  ('tfidf_ngrams', TfidfVectorizer(analyzer='char_wb', 
-                                                    min_df=0.1, 
-                                                    ngram_range=(1, 6))), 
+
+    
+    estimators = [  ('features', FeatureUnion([
+                                    ('tfidf_ngrams', TfidfVectorizer(analyzer='char_wb',norm='l1', min_df=0.1, ngram_range=(1, 6)))
+                                    ])
+                    ), 
                     # ('tfidf_punctuation', TfidfVectorizer(analyzer='char_wb', 
                     #                                       vocabulary=punt_vocab, 
                     #                                       ngram_range=(1, 6))) 
@@ -22,6 +24,6 @@ def define_pipeline():
                 ]
 
 
-    pipe = FeatureUnion(estimators)
+    pipe = Pipeline(estimators)
     return pipe
 
