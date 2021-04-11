@@ -155,3 +155,4 @@ wandb
 #environment
 author
 launch.json
+*.onnx

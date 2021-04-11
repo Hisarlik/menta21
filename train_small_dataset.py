@@ -16,7 +16,7 @@ from sklearn.metrics import f1_score, classification_report, confusion_matrix
 from sklearn.pipeline import Pipeline,FeatureUnion
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 
-
+from model import model_pipeline
 
 sklearn_random = 20
 
@@ -261,24 +261,38 @@ def vectorizer():
 
 
 
+if __name__ == "__main__":
 
-create_dataset()
-#vectorizer()
-
-#train = pd.read_csv(path_dataset+"train_complete.csv")
-#train = train[:500]
-
-#dev = pd.read_csv(path_dataset+"dev_complete.csv")
-#dev = train[:500]
-
-#test = pd.read_csv(path_dataset+"test_complete.csv")
-#test = train[:500]
-
-
-#train.to_csv(path_dataset+"train_complete.csv", index=False)
-#dev.to_csv(path_dataset+"dev_complete.csv", index=False)
-#test.to_csv(path_dataset+"test_complete.csv", index=False)
+    config = dict(
+        epochs = 10,
+        batch_size = 80,
+        learning_rate = 0.001,
+        dataset = "Authorship 2000",
+        architecture = "Dense:  Input, Layer 512, relu, batchnorm 512 , Layer 64, relu, batchnorm 64, dropout 0.1, output", 
+        criterion = "BCEWithLogitsLoss",
+        optimizer = "Adam"
+    )
 
 
-c = joblib.load(path_dataset+'conf.pkl')
-print(c)
+
+    #create_dataset()
+    #vectorizer()
+    model_pipeline(config)
+
+    #train = pd.read_csv(path_dataset+"train_complete.csv")
+    #train = train[:500]
+
+    #dev = pd.read_csv(path_dataset+"dev_complete.csv")
+    #dev = train[:500]
+
+    #test = pd.read_csv(path_dataset+"test_complete.csv")
+    #test = train[:500]
+
+
+    #train.to_csv(path_dataset+"train_complete.csv", index=False)
+    #dev.to_csv(path_dataset+"dev_complete.csv", index=False)
+    #test.to_csv(path_dataset+"test_complete.csv", index=False)
+
+
+    c = joblib.load(path_dataset+'conf.pkl')
+    print(c)
