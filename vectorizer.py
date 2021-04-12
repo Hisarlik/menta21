@@ -66,6 +66,7 @@ def vectorize_dataset(config):
     Y_train_memmap = None
 
     pipe_ngrams = define_vectorizer("ngrams")
+    print(texts1)
     pipe_ngrams.fit(texts1[:15000])
     transformer_size = len(pipe_ngrams.named_steps['tfidf_ngrams'].get_feature_names())
     X_train = np.memmap(path + 'features_ngrams_X_train.npy', dtype='float32', mode='w+', shape=(len(texts1), transformer_size))

@@ -1,5 +1,5 @@
 import pandas as pd
-from model import model_pipeline
+from model import model_pipeline, predict_model
 from vectorizer import vectorize_dataset
 from sklearn.model_selection import train_test_split
 
@@ -61,15 +61,22 @@ if __name__ == "__main__":
         architecture = "Dense:  Input, Layer 512, relu, batchnorm 512 , Layer 64, relu, batchnorm 64, dropout 0.1, output", 
         criterion = "BCEWithLogitsLoss",
         optimizer = "Adam",
-        limit_dataset = 500,
-        path_dataset = "data/500/"
+        limit_dataset = None,
+        path_dataset = "data/small_1204/"
         
     )
 
+    task = "predict"
 
-    #create_dataset(config)
-    #vectorize_dataset(config)
-    model_pipeline(config)
+    if task == "train":
+
+        create_dataset(config)
+        vectorize_dataset(config)
+        model_pipeline(config)
+
+    elif task == "predict":
+
+        predict_model(config)
 
 
 

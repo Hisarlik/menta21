@@ -4,6 +4,7 @@ import string
 import pandas as pd
 import numpy as np
 import scipy
+import joblib
 from scipy.stats import uniform
 
 from sklearn.linear_model import LogisticRegression
@@ -19,6 +20,7 @@ from torch import nn
 from torch import optim
 from torch.utils.data import Dataset, DataLoader
 
+import onnx
 import wandb 
 
 
@@ -145,41 +147,63 @@ def model_pipeline(hyperparameters):
     train(model, train_loader, criterion, optimizer, config)
 
     print("Calling test")
-    return test(model, test_loader)
+    return test(model, test_loader, log=True)
 
 
 
-def get_data(type_data="train"):
-  TEMP_DATA_DIR = "data/small/"
+def get_data(conf, type_data="train"):
+  
+  print(conf)
+  path = conf.path_dataset
+  conf_model = joblib.load(path+'conf.pkl')
+  print(conf_model)
 
   if type_data == "train":
-    X_train_ngrams  = np.memmap(TEMP_DATA_DIR + 'features_ngrams_X_train.npy', dtype='float32', mode='r', shape=(35768, 44872))
-    X_train_punct = np.memmap(TEMP_DATA_DIR + 'features_punct_X_train.npy', dtype='float32', mode='r', shape=(35768, 32))
-    Y_train = np.memmap(TEMP_DATA_DIR + 'Y_train.npy', dtype='int32', mode='r', shape=(35768))
+    X_train_ngrams  = np.memmap(path + 'features_ngrams_X_train.npy', dtype='float32', mode='r', shape=(conf_model['rows_train'], conf_model['ngrams']))
+    X_train_punct = np.memmap(path + 'features_punct_X_train.npy', dtype='float32', mode='r', shape=(conf_model['rows_train'], conf_model['punct']))
+    Y_train = np.memmap(path + 'Y_train.npy', dtype='int32', mode='r', shape=(conf_model['rows_train']))
     return AuthorshipDataset(torch.from_numpy(X_train_ngrams), 
                              torch.from_numpy(X_train_punct),
                              torch.from_numpy(Y_train.astype('float32')))
-  elif type_data == "test":
-    X_test_ngrams = np.memmap(TEMP_DATA_DIR + 'features_ngrams_X_dev.npy', dtype='float32', mode='r', shape=(8942, 44872))
-    X_test_punct = np.memmap(TEMP_DATA_DIR + 'features_punct_X_dev.npy', dtype='float32', mode='r', shape=(8942, 32))
-    Y_test = np.memmap(TEMP_DATA_DIR + 'Y_dev.npy', dtype='int32', mode='r', shape=(8942))
-    return AuthorshipDataset(torch.from_numpy(X_test_ngrams), 
+  elif type_data == "dev":
+    X_dev_ngrams = np.memmap(path + 'features_ngrams_X_dev.npy', dtype='float32', mode='r', shape=(conf_model['rows_dev'], conf_model['ngrams']))
+    X_dev_punct = np.memmap(path + 'features_punct_X_dev.npy', dtype='float32', mode='r', shape=(conf_model['rows_dev'], conf_model['punct']))
+    Y_dev = np.memmap(path + 'Y_dev.npy', dtype='int32', mode='r', shape=(conf_model['rows_dev']))
+    return AuthorshipDataset(torch.from_numpy(X_dev_ngrams), 
+                             torch.from_numpy(X_dev_punct),
+                             torch.from_numpy(Y_dev.astype('float32')))
+
+def get_predict_data(conf):
+
+  print(conf)
+  path = conf['path_dataset']
+  conf_model = joblib.load(path+'conf.pkl')
+  print(conf_model)
+
+  X_test_ngrams = np.memmap(path + 'features_ngrams_X_test.npy', dtype='float32', mode='r', shape=(conf_model['rows_test'], conf_model['ngrams']))
+  X_test_punct = np.memmap(path + 'features_punct_X_test.npy', dtype='float32', mode='r', shape=(conf_model['rows_test'], conf_model['punct']))
+  Y_test = np.memmap(path + 'Y_test.npy', dtype='int32', mode='r', shape=(conf_model['rows_test']))
+  return AuthorshipDataset(torch.from_numpy(X_test_ngrams), 
                              torch.from_numpy(X_test_punct),
                              torch.from_numpy(Y_test.astype('float32')))
+
+
+
+  
 
 
 
 def make(config):
 
   # get_data
-  data_train = get_data(type_data="train")
-  data_test = get_data(type_data="test")
+  data_train = get_data(config, type_data="train")
+  data_dev = get_data(config, type_data="dev")
 
   data_input_size = data_train.vector_size()
   
   # data_loaders
   train_loader = DataLoader(dataset=data_train, batch_size=config.batch_size, shuffle=False)
-  test_loader = DataLoader(dataset=data_test, batch_size=config.batch_size, shuffle=False)
+  dev_loader = DataLoader(dataset=data_dev, batch_size=config.batch_size, shuffle=False)
 
   
   #model
@@ -190,7 +214,7 @@ def make(config):
   optimizer = optim.Adam(model.parameters(), lr=config.learning_rate)
 
 
-  return model, train_loader, test_loader, criterion, optimizer
+  return model, train_loader, dev_loader, criterion, optimizer
 
 
 def binary_accuracy(y_pred, y_test):
@@ -232,9 +256,12 @@ def train(model, train_loader, criterion, optimizer, config):
           "Epoch": epoch,
           "Train Accuracy": epoch_acc/len(train_loader),
           "Train Loss": epoch_loss/len(train_loader)})
+  torch.save(model.state_dict(), config.path_dataset+"model.pt")
+
+def test(model, test_loader, log=False):
 
 
-def test(model, test_loader):
+
     model.eval()
     y_pred_list = []
     # Run the model on some test examples
@@ -259,10 +286,30 @@ def test(model, test_loader):
 
 
 
-            
-        wandb.log({"test_accuracy": correct / total})
+        if log:
+          wandb.log({"test_accuracy": correct / total})
 
     y_pred_list = [a.squeeze().tolist() for a in y_pred_list]
-    torch.onnx.export(model,(X_ngrams_batch, X_punct_batch),"model.onnx")
-    #wandb.save("model.onnx")
+    
     return y_pred_list
+
+
+
+
+
+def predict_model(conf):
+
+
+  # get_data
+  data_test = get_predict_data(conf)
+  data_input_size = data_test.vector_size()
+  
+  # data_loaders
+  test_loader = DataLoader(dataset=data_test, batch_size=conf['batch_size'], shuffle=False)
+
+
+  #model
+  model = AuthorshipClassification(data_input_size).to(device)
+  model.load_state_dict(torch.load(conf['path_dataset']+"model.pt"))
+
+  test(model, test_loader)
