@@ -35,6 +35,40 @@ def define_vectorizer(type):
     pipe = Pipeline(estimators)
     return pipe
 
+def fit_vectorizer(config):
+
+    LIMIT_VECTORIZER=15000
+
+    path = config['path_dataset']
+    train_data = path+"train.csv"
+
+    print("fit")
+    ## Load data
+    data_df = pd.read_csv(train_data)   
+    if len(data_df)>LIMIT_VECTORIZER:
+        data_df = data_df[:LIMIT_VECTORIZER]
+    texts = data_df['text1'] 
+
+    print("Size:", len(texts))
+    print("Labels:", data_df["same"].value_counts()) 
+    print("Labels")
+    ## labels
+    label_encoder = LabelEncoder().fit(data_df["same"])
+    
+    
+    print("define ngrams")
+    ## ngrams vect
+    pipe_ngrams = define_vectorizer("ngrams")
+    pipe_ngrams.fit(texts)
+    
+    print("define punct")
+    ##punct vect
+    pipe_punct = define_vectorizer("punct")
+    pipe_punct.fit(texts)
+    
+    
+    return pipe_ngrams, pipe_punct, label_encoder
+
 def vectorize_dataset(config):
 
     conf = {}
@@ -49,28 +83,24 @@ def vectorize_dataset(config):
     dev_data = path+"dev.csv"
     test_data = path+"test.csv"
 
+    ############# fit ###################################
+
     print("Start vect")
+    pipe_ngrams, pipe_punct, label_encoder =  fit_vectorizer(config)
 
+    ############### train #####################################
+    print("train data")
     train_df = pd.read_csv(train_data)
-
-    texts1 = train_df['text1']
-    texts2 = train_df['text2']
-    train_df['same'] = LabelEncoder().fit_transform(train_df["same"])
-    Y_train = train_df['same'].values
+    train_length = len(train_df['text1'])
+    Y_train = label_encoder.transform(train_df["same"].values)
     train_df = None
-
     Y_train_memmap = np.memmap(path + 'Y_train.npy', dtype='int32', mode='w+', shape=(len(Y_train)))
     Y_train_memmap[:] = Y_train
-    print(Y_train_memmap)
     Y_train_memmap.flush()
     Y_train_memmap = None
 
-    pipe_ngrams = define_vectorizer("ngrams")
-    print(texts1)
-    pipe_ngrams.fit(texts1[:15000])
     transformer_size = len(pipe_ngrams.named_steps['tfidf_ngrams'].get_feature_names())
-    X_train = np.memmap(path + 'features_ngrams_X_train.npy', dtype='float32', mode='w+', shape=(len(texts1), transformer_size))
-    print(X_train.shape)
+    X_train = np.memmap(path + 'features_ngrams_X_train.npy', dtype='float32', mode='w+', shape=(train_length, transformer_size))
     chunksize = 1000
     reader = pd.read_csv(train_data, iterator=True, chunksize=chunksize)
     i = 0
@@ -88,16 +118,10 @@ def vectorize_dataset(config):
     conf['rows_train'] = X_train.shape[0]
     conf['ngrams'] = X_train.shape[1]
     X_train.flush()
-
-    X_train_ngrams = np.memmap(path + 'features_ngrams_X_train.npy', dtype='float32', mode='r', shape=(len(texts1), transformer_size))
-    print(X_train_ngrams.shape)
-    X_train_ngrams = None
     X_train = None
 
-    pipe_punct = define_vectorizer("punct")
-    pipe_punct.fit(texts1[:15000])
     transformer_size = len(pipe_punct.named_steps['tfidf_punctuation'].get_feature_names())
-    X_train = np.memmap(path + 'features_punct_X_train.npy', dtype='float32', mode='w+', shape=(len(texts1), transformer_size))
+    X_train = np.memmap(path + 'features_punct_X_train.npy', dtype='float32', mode='w+', shape=(train_length, transformer_size))
     reader = pd.read_csv(train_data, iterator=True, chunksize=chunksize)
     i = 0
     for chunk in reader:
@@ -112,27 +136,24 @@ def vectorize_dataset(config):
         i+= 1
     print(X_train.shape)
     conf['punct'] = X_train.shape[1]
+    X_train.flush()
+    X_train = None
+    
 
-    ##dev_df
+    ############### dev #####################################
+    print("dev data")
     dev_df = pd.read_csv(dev_data)
-    texts = np.hstack([dev_df['text1'].values, dev_df['text2'].values])
-    texts1 = dev_df['text1']
-    texts2 = dev_df['text2']
-    dev_df['same'] = LabelEncoder().fit_transform(dev_df["same"])
-    Y_test = dev_df['same'].values
-
-    Y_test_memmap = np.memmap(path + 'Y_dev.npy', dtype='int32', mode='w+', shape=(len(Y_test)))
-    Y_test_memmap[:] = Y_test
-    print(Y_test_memmap)
-    Y_test_memmap.flush()
-    Y_test_memmap = None
+    dev_length = len(dev_df['text1'])
+    Y_dev = label_encoder.transform(dev_df["same"].values)
+    dev_df = None
+    Y_dev_memmap = np.memmap(path + 'Y_dev.npy', dtype='int32', mode='w+', shape=(len(Y_dev)))
+    Y_dev_memmap[:] = Y_dev
+    Y_dev_memmap.flush()
+    Y_dev_memmap = None
 
     transformer_size = len(pipe_ngrams.named_steps['tfidf_ngrams'].get_feature_names())
-    X_test = np.memmap(path + 'features_ngrams_X_dev.npy', dtype='float32', mode='w+', shape=(len(texts1), transformer_size))
+    X_dev = np.memmap(path + 'features_ngrams_X_dev.npy', dtype='float32', mode='w+', shape=(dev_length, transformer_size))
     reader = pd.read_csv(dev_data, iterator=True, chunksize=chunksize)
-    print(X_test.shape)
-    conf['rows_dev'] = X_test.shape[0]
-
     i = 0
     for chunk in reader:
         size = len(chunk)
@@ -142,11 +163,15 @@ def vectorize_dataset(config):
         print(f"Iterator: [{id_low},{id_high}]")
         x1 = pipe_ngrams.transform(chunk['text1'])
         x2 = pipe_ngrams.transform(chunk['text2'])
-        X_test[id_low:id_high] = np.abs(x1-x2).todense()
+        X_dev[id_low:id_high] = np.abs(x1-x2).todense()
         i+= 1
-    transformer_size = len(pipe_punct.named_steps['tfidf_punctuation'].get_feature_names())
-    X_test = np.memmap(path + 'features_punct_X_dev.npy', dtype='float32', mode='w+', shape=(len(texts1), transformer_size))
+    print(X_dev.shape)
+    conf['rows_dev'] = X_dev.shape[0]
+    X_dev.flush()
+    X_dev = None
 
+    transformer_size = len(pipe_punct.named_steps['tfidf_punctuation'].get_feature_names())
+    X_dev= np.memmap(path + 'features_punct_X_dev.npy', dtype='float32', mode='w+', shape=(dev_length, transformer_size))
     reader = pd.read_csv(dev_data, iterator=True, chunksize=chunksize)
     i = 0
     for chunk in reader:
@@ -157,25 +182,23 @@ def vectorize_dataset(config):
         print(f"Iterator: [{id_low},{id_high}]")
         x1 = pipe_punct.transform(chunk['text1'])
         x2 = pipe_punct.transform(chunk['text2'])
-        X_test[id_low:id_high] = np.abs(x1-x2).todense()
+        X_dev[id_low:id_high] = np.abs(x1-x2).todense()
         i+= 1
+    print(X_dev.shape)
+    X_dev.flush()
+    X_dev = None
 
-
-
-    dev_df = pd.read_csv(test_data)
-    texts = np.hstack([dev_df['text1'].values, dev_df['text2'].values])
-    texts1 = dev_df['text1']
-    texts2 = dev_df['text2']
-    dev_df['same'] = LabelEncoder().fit_transform(dev_df["same"])
-    Y_test = dev_df['same'].values
+    ############### test #####################################
+    print("test")
+    test_df = pd.read_csv(test_data)
+    test_length = len(test_df['text1'])
+    Y_test = label_encoder.transform(test_df["same"].values)
     Y_test_memmap = np.memmap(path+'Y_test.npy', dtype='int32', mode='w+', shape=(len(Y_test)))
     Y_test_memmap[:] = Y_test
     Y_test_memmap.flush()
-    transformer_size = len(pipe_ngrams.named_steps['tfidf_ngrams'].get_feature_names())
 
-    X_test = np.memmap(path+'features_ngrams_X_test.npy', dtype='float32', mode='w+', shape=(len(texts1), transformer_size))
-    print(X_test.shape)
-    conf['rows_test'] = X_test.shape[0]
+    transformer_size = len(pipe_ngrams.named_steps['tfidf_ngrams'].get_feature_names())
+    X_test = np.memmap(path+'features_ngrams_X_test.npy', dtype='float32', mode='w+', shape=(test_length, transformer_size))
     reader = pd.read_csv(test_data, iterator=True, chunksize=chunksize)
     i = 0
     for chunk in reader:
@@ -188,10 +211,15 @@ def vectorize_dataset(config):
         x2 = pipe_ngrams.transform(chunk['text2'])
         X_test[id_low:id_high] = np.abs(x1-x2).todense()
         i+= 1
-    transformer_size = len(pipe_punct.named_steps['tfidf_punctuation'].get_feature_names())
-    X_test = np.memmap(path+'features_punct_X_test.npy', dtype='float32', mode='w+', shape=(len(texts1), transformer_size))
-    reader = pd.read_csv(test_data, iterator=True, chunksize=chunksize)
+    print(X_test.shape)
+    conf['rows_test'] = X_test.shape[0]
+    X_test.flush()
+    X_test = None
 
+
+    transformer_size = len(pipe_punct.named_steps['tfidf_punctuation'].get_feature_names())
+    X_test = np.memmap(path+'features_punct_X_test.npy', dtype='float32', mode='w+', shape=(test_length, transformer_size))
+    reader = pd.read_csv(test_data, iterator=True, chunksize=chunksize)
     i = 0
     for chunk in reader:
         size = len(chunk)
@@ -203,9 +231,14 @@ def vectorize_dataset(config):
         x2 = pipe_punct.transform(chunk['text2'])
         X_test[id_low:id_high] = np.abs(x1-x2).todense()
         i+= 1
+    X_test.flush()
+    X_test = None
+
+    ##### store 
 
     joblib.dump(pipe_ngrams, path+'pipe_ngrams.pkl')
     joblib.dump(pipe_punct, path+'pipe_punct.pkl')  
+    joblib.dump(label_encoder, path+'label_encoder.pkl') 
     joblib.dump(conf, path+'conf.pkl')  
 
     c = joblib.load(path+'conf.pkl')
