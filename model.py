@@ -14,6 +14,7 @@ from sklearn.pipeline import Pipeline,FeatureUnion
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.svm import SVC
+from sklearn.model_selection import KFold
 
 import torch
 from torch import nn
@@ -135,26 +136,61 @@ class AuthorshipClassification(nn.Module):
 
 
 def model_pipeline(hyperparameters):
+    
+    
+    
+    # get_data
+    X_ngrams, X_punct, y_data = get_data(hyperparameters)
+    
+    for train_index, test_index in KFold(n_splits=5).split(X_ngrams):
+        
 
-  with wandb.init(project="authorship", config=hyperparameters):
+        with wandb.init(project="authorship", config=hyperparameters):
+            
+            config = wandb.config
+            print(train_index) 
+            print(test_index)
 
-    config = wandb.config
-    print("Calling make")
-    model, train_loader, test_loader, criterion, optimizer = make(config)
-    print(model)
+            train_data = AuthorshipDataset(torch.from_numpy(X_ngrams[train_index]), 
+                                 torch.from_numpy(X_punct[train_index]),                            
+                                 torch.from_numpy(y_data.astype('float32')[train_index]))
 
-    print("Calling train")
-    train(model, train_loader, criterion, optimizer, config)
 
-    print("Calling test")
-    return test(model, test_loader, log=True)
+            dev_data =  AuthorshipDataset(torch.from_numpy(X_ngrams[test_index]), 
+                                 torch.from_numpy(X_punct[test_index]),                           
+                                 torch.from_numpy(y_data.astype('float32')[test_index]))
+
+
+            data_input_size = train_data.vector_size()
+
+            # data_loaders
+            train_loader = DataLoader(dataset=train_data, batch_size=config.batch_size, shuffle=False)
+            dev_loader = DataLoader(dataset=dev_data, batch_size=config.batch_size, shuffle=False)
+
+
+            #model
+            model = AuthorshipClassification(data_input_size).to(device)
+
+            # criterion and optimizer
+            criterion = nn.BCEWithLogitsLoss()
+            optimizer = optim.Adam(model.parameters(), lr=config.learning_rate)
+
+            print(model)
+
+            print("Calling train")
+            train(model, train_loader, criterion, optimizer, config)
+
+            print("Calling dev")
+            test(model, dev_loader)
+
+            print("Fin del modelo")
 
 
 
 def get_data(conf, type_data="train"):
   
   print(conf)
-  path = conf.path_dataset
+  path = conf['path_dataset']
   conf_model = joblib.load(path+'conf.pkl')
   print(conf_model)
 
@@ -162,16 +198,9 @@ def get_data(conf, type_data="train"):
     X_train_ngrams  = np.memmap(path + 'features_ngrams_X_train.npy', dtype='float32', mode='r', shape=(conf_model['rows_train'], conf_model['ngrams']))
     X_train_punct = np.memmap(path + 'features_punct_X_train.npy', dtype='float32', mode='r', shape=(conf_model['rows_train'], conf_model['punct']))
     Y_train = np.memmap(path + 'Y_train.npy', dtype='int32', mode='r', shape=(conf_model['rows_train']))
-    return AuthorshipDataset(torch.from_numpy(X_train_ngrams), 
-                             torch.from_numpy(X_train_punct),
-                             torch.from_numpy(Y_train.astype('float32')))
-  elif type_data == "dev":
-    X_dev_ngrams = np.memmap(path + 'features_ngrams_X_dev.npy', dtype='float32', mode='r', shape=(conf_model['rows_dev'], conf_model['ngrams']))
-    X_dev_punct = np.memmap(path + 'features_punct_X_dev.npy', dtype='float32', mode='r', shape=(conf_model['rows_dev'], conf_model['punct']))
-    Y_dev = np.memmap(path + 'Y_dev.npy', dtype='int32', mode='r', shape=(conf_model['rows_dev']))
-    return AuthorshipDataset(torch.from_numpy(X_dev_ngrams), 
-                             torch.from_numpy(X_dev_punct),
-                             torch.from_numpy(Y_dev.astype('float32')))
+    
+    return X_train_ngrams, X_train_punct, Y_train
+
 
 def get_predict_data(conf):
 
@@ -186,36 +215,6 @@ def get_predict_data(conf):
   return AuthorshipDataset(torch.from_numpy(X_test_ngrams), 
                              torch.from_numpy(X_test_punct),
                              torch.from_numpy(Y_test.astype('float32')))
-
-
-
-  
-
-
-
-def make(config):
-
-  # get_data
-  data_train = get_data(config, type_data="train")
-  data_dev = get_data(config, type_data="dev")
-
-  data_input_size = data_train.vector_size()
-  
-  # data_loaders
-  train_loader = DataLoader(dataset=data_train, batch_size=config.batch_size, shuffle=False)
-  dev_loader = DataLoader(dataset=data_dev, batch_size=config.batch_size, shuffle=False)
-
-  
-  #model
-  model = AuthorshipClassification(data_input_size).to(device)
-
-  # criterion and optimizer
-  criterion = nn.BCEWithLogitsLoss()
-  optimizer = optim.Adam(model.parameters(), lr=config.learning_rate)
-
-
-  return model, train_loader, dev_loader, criterion, optimizer
-
 
 def binary_accuracy(y_pred, y_test):
 

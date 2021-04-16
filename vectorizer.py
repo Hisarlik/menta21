@@ -80,8 +80,7 @@ def vectorize_dataset(config):
 
     path = config['path_dataset']
     train_data = path+"train.csv"
-    dev_data = path+"dev.csv"
-    test_data = path+"test.csv"
+
 
     ############# fit ###################################
 
@@ -140,99 +139,6 @@ def vectorize_dataset(config):
     X_train = None
     
 
-    ############### dev #####################################
-    print("dev data")
-    dev_df = pd.read_csv(dev_data)
-    dev_length = len(dev_df['text1'])
-    Y_dev = label_encoder.transform(dev_df["same"].values)
-    dev_df = None
-    Y_dev_memmap = np.memmap(path + 'Y_dev.npy', dtype='int32', mode='w+', shape=(len(Y_dev)))
-    Y_dev_memmap[:] = Y_dev
-    Y_dev_memmap.flush()
-    Y_dev_memmap = None
-
-    transformer_size = len(pipe_ngrams.named_steps['tfidf_ngrams'].get_feature_names())
-    X_dev = np.memmap(path + 'features_ngrams_X_dev.npy', dtype='float32', mode='w+', shape=(dev_length, transformer_size))
-    reader = pd.read_csv(dev_data, iterator=True, chunksize=chunksize)
-    i = 0
-    for chunk in reader:
-        size = len(chunk)
-        print(len(chunk))
-        id_low = chunksize*i
-        id_high =  id_low +size
-        print(f"Iterator: [{id_low},{id_high}]")
-        x1 = pipe_ngrams.transform(chunk['text1'])
-        x2 = pipe_ngrams.transform(chunk['text2'])
-        X_dev[id_low:id_high] = np.abs(x1-x2).todense()
-        i+= 1
-    print(X_dev.shape)
-    conf['rows_dev'] = X_dev.shape[0]
-    X_dev.flush()
-    X_dev = None
-
-    transformer_size = len(pipe_punct.named_steps['tfidf_punctuation'].get_feature_names())
-    X_dev= np.memmap(path + 'features_punct_X_dev.npy', dtype='float32', mode='w+', shape=(dev_length, transformer_size))
-    reader = pd.read_csv(dev_data, iterator=True, chunksize=chunksize)
-    i = 0
-    for chunk in reader:
-        size = len(chunk)
-        print(len(chunk))
-        id_low = chunksize*i
-        id_high =  id_low +size
-        print(f"Iterator: [{id_low},{id_high}]")
-        x1 = pipe_punct.transform(chunk['text1'])
-        x2 = pipe_punct.transform(chunk['text2'])
-        X_dev[id_low:id_high] = np.abs(x1-x2).todense()
-        i+= 1
-    print(X_dev.shape)
-    X_dev.flush()
-    X_dev = None
-
-    ############### test #####################################
-    print("test")
-    test_df = pd.read_csv(test_data)
-    test_length = len(test_df['text1'])
-    Y_test = label_encoder.transform(test_df["same"].values)
-    Y_test_memmap = np.memmap(path+'Y_test.npy', dtype='int32', mode='w+', shape=(len(Y_test)))
-    Y_test_memmap[:] = Y_test
-    Y_test_memmap.flush()
-
-    transformer_size = len(pipe_ngrams.named_steps['tfidf_ngrams'].get_feature_names())
-    X_test = np.memmap(path+'features_ngrams_X_test.npy', dtype='float32', mode='w+', shape=(test_length, transformer_size))
-    reader = pd.read_csv(test_data, iterator=True, chunksize=chunksize)
-    i = 0
-    for chunk in reader:
-        size = len(chunk)
-        print(len(chunk))
-        id_low = chunksize*i
-        id_high =  id_low +size
-        print(f"Iterator: [{id_low},{id_high}]")
-        x1 = pipe_ngrams.transform(chunk['text1'])
-        x2 = pipe_ngrams.transform(chunk['text2'])
-        X_test[id_low:id_high] = np.abs(x1-x2).todense()
-        i+= 1
-    print(X_test.shape)
-    conf['rows_test'] = X_test.shape[0]
-    X_test.flush()
-    X_test = None
-
-
-    transformer_size = len(pipe_punct.named_steps['tfidf_punctuation'].get_feature_names())
-    X_test = np.memmap(path+'features_punct_X_test.npy', dtype='float32', mode='w+', shape=(test_length, transformer_size))
-    reader = pd.read_csv(test_data, iterator=True, chunksize=chunksize)
-    i = 0
-    for chunk in reader:
-        size = len(chunk)
-        print(len(chunk))
-        id_low = chunksize*i
-        id_high =  id_low +size
-        print(f"Iterator: [{id_low},{id_high}]")
-        x1 = pipe_punct.transform(chunk['text1'])
-        x2 = pipe_punct.transform(chunk['text2'])
-        X_test[id_low:id_high] = np.abs(x1-x2).todense()
-        i+= 1
-    X_test.flush()
-    X_test = None
 
     ##### store 
 

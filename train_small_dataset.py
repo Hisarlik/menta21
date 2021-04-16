@@ -36,13 +36,8 @@ def create_dataset(config):
 
     print(dataset.head())
 
-    train, test = train_test_split(dataset, test_size=0.15, random_state=sklearn_random)
+    dataset.to_csv(config['path_dataset']+"train.csv", index=False)
 
-    train, dev = train_test_split(train, test_size=0.20, random_state=sklearn_random)
-
-    train.to_csv(config['path_dataset']+"train.csv", index=False)
-    dev.to_csv(config['path_dataset']+"dev.csv", index=False)
-    test.to_csv(config['path_dataset']+"test.csv", index=False)
 
 
 
@@ -55,23 +50,24 @@ if __name__ == "__main__":
 
     config = dict(
         epochs = 10,
-        batch_size = 80,
+        batch_size = 128,
         learning_rate = 0.001,
         dataset = "Authorship 2000",
         architecture = "Dense:  Input, Layer 512, relu, batchnorm 512 , Layer 64, relu, batchnorm 64, dropout 0.1, output", 
         criterion = "BCEWithLogitsLoss",
         optimizer = "Adam",
         limit_dataset = None,
-        path_dataset = "data/small_1204/"
+        path_dataset = "data/temp/",
+        limit_data_vectorizer = 15000
         
     )
 
-    task = "predict"
+    task = "train"
 
     if task == "train":
 
-        create_dataset(config)
-        vectorize_dataset(config)
+        #create_dataset(config)
+        #vectorize_dataset(config)
         model_pipeline(config)
 
     elif task == "predict":
