@@ -15,6 +15,7 @@ from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.svm import SVC
 from sklearn.model_selection import KFold
+from sklearn.metrics import f1_score
 
 import torch
 from torch import nn
@@ -141,7 +142,8 @@ def model_pipeline(hyperparameters):
     
     # get_data
     X_ngrams, X_punct, y_data = get_data(hyperparameters)
-    
+
+    f1_scores = []
     for train_index, test_index in KFold(n_splits=5).split(X_ngrams):
         
 
@@ -181,9 +183,15 @@ def model_pipeline(hyperparameters):
             train(model, train_loader, criterion, optimizer, config)
 
             print("Calling dev")
-            test(model, dev_loader)
+            y_pred = test(model, dev_loader)
 
+            print(classification_report(y_data.astype('float32')[test_index], y_pred))
+            f1_score_model = f1_score(y_data.astype('float32')[test_index], y_pred)
+            print(f1_score_model)
+            f1_scores.append(f1_score_model)
             print("Fin del modelo")
+    print(f1_scores)
+    print(np.array(np.mean(f1_scores, axis=0)))
 
 
 
@@ -311,4 +319,4 @@ def predict_model(conf):
   model = AuthorshipClassification(data_input_size).to(device)
   model.load_state_dict(torch.load(conf['path_dataset']+"model.pt"))
 
-  test(model, test_loader)
+  y_pred = test(model, test_loader)
