@@ -137,7 +137,6 @@ def vectorize_dataset(config):
     conf['punct'] = X_train.shape[1]
     X_train.flush()
     X_train = None
-    
 
 
     ##### store 
@@ -147,5 +146,63 @@ def vectorize_dataset(config):
     joblib.dump(label_encoder, path+'label_encoder.pkl') 
     joblib.dump(conf, path+'conf.pkl')  
 
-    c = joblib.load(path+'conf.pkl')
-    print(c)
+def vectorize_predict(config):
+
+    conf = {}
+
+    path_model = config['path_model']
+    path_predict = config['path_predict']
+    path_predict_data = path_model+"temp.csv"
+ 
+    pipe_ngrams = joblib.load( path_model+'pipe_ngrams.pkl')
+    pipe_punct = joblib.load(path_model+'pipe_punct.pkl')  
+
+
+    ############### test #####################################
+    print("predict data")
+    predict_df = pd.read_csv(path_predict_data)
+    predict_length = len(predict_df['text1'])
+    print(predict_length)
+
+    transformer_size = len(pipe_ngrams.named_steps['tfidf_ngrams'].get_feature_names())
+    X_predict = np.memmap(path_predict + 'features_ngrams_X_predict.npy', dtype='float32', mode='w+', shape=(predict_length, transformer_size))
+    chunksize = 1000
+    reader = pd.read_csv(path_predict_data, iterator=True, chunksize=chunksize)
+    i = 0
+    for chunk in reader:
+        size = len(chunk)
+        print(len(chunk))
+        id_low = chunksize*i
+        id_high =  id_low +size
+        print(f"Iterator: [{id_low},{id_high}]")
+        x1 = pipe_ngrams.transform(chunk['text1'])
+        x2 = pipe_ngrams.transform(chunk['text2'])
+        X_predict[id_low:id_high] = np.abs(x1-x2).todense()
+        i+= 1
+    print(X_predict.shape)
+    conf['rows_predict'] = X_predict.shape[0]
+    conf['ngrams'] = X_predict.shape[1]
+    X_predict.flush()
+    X_predict = None
+
+    transformer_size = len(pipe_punct.named_steps['tfidf_punctuation'].get_feature_names())
+    X_predict = np.memmap(path_predict + 'features_punct_X_predict.npy', dtype='float32', mode='w+', shape=(predict_length, transformer_size))
+    reader = pd.read_csv(path_predict_data, iterator=True, chunksize=chunksize)
+    i = 0
+    for chunk in reader:
+        size = len(chunk)
+        print(len(chunk))
+        id_low = chunksize*i
+        id_high =  id_low +size
+        print(f"Iterator: [{id_low},{id_high}]")
+        x1 = pipe_punct.transform(chunk['text1'])
+        x2 = pipe_punct.transform(chunk['text2'])
+        X_predict[id_low:id_high] = np.abs(x1-x2).todense()
+        i+= 1
+    print(X_predict.shape)
+    conf['punct'] = X_predict.shape[1]
+    X_predict.flush()
+    X_predict = None
+
+    joblib.dump(conf, path_predict+'conf_predict.pkl')
+

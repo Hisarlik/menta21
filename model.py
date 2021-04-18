@@ -61,7 +61,25 @@ class AuthorshipDataset(Dataset):
 
 
   def __len__(self):
-    return len(self.y_data)
+    return self.X_ngrams_data.shape[0]
+
+  def vector_size(self):
+    return self.X_ngrams_data.shape[1], self.X_punct_data.shape[1]
+
+
+class AuthorshipDatasetPrediction(Dataset):
+
+  def __init__(self, X_ngrams_data, X_punct_data):
+    self.X_ngrams_data = X_ngrams_data
+    self.X_punct_data = X_punct_data
+
+  
+  def __getitem__(self, index):
+    return self.X_ngrams_data[index], self.X_punct_data[index]
+
+
+  def __len__(self):
+    return self.X_ngrams_data.shape[0]
 
   def vector_size(self):
     return self.X_ngrams_data.shape[1], self.X_punct_data.shape[1]
@@ -183,7 +201,7 @@ def model_pipeline(hyperparameters):
             train(model, train_loader, criterion, optimizer, config)
 
             print("Calling dev")
-            y_pred = test(model, dev_loader)
+            y_pred = dev(model, dev_loader)
 
             print(classification_report(y_data.astype('float32')[test_index], y_pred))
             f1_score_model = f1_score(y_data.astype('float32')[test_index], y_pred)
@@ -213,16 +231,15 @@ def get_data(conf, type_data="train"):
 def get_predict_data(conf):
 
   print(conf)
-  path = conf['path_dataset']
-  conf_model = joblib.load(path+'conf.pkl')
+  path = conf['path_predict']
+  conf_model = joblib.load(path+'conf_predict.pkl')
   print(conf_model)
 
-  X_test_ngrams = np.memmap(path + 'features_ngrams_X_test.npy', dtype='float32', mode='r', shape=(conf_model['rows_test'], conf_model['ngrams']))
-  X_test_punct = np.memmap(path + 'features_punct_X_test.npy', dtype='float32', mode='r', shape=(conf_model['rows_test'], conf_model['punct']))
-  Y_test = np.memmap(path + 'Y_test.npy', dtype='int32', mode='r', shape=(conf_model['rows_test']))
-  return AuthorshipDataset(torch.from_numpy(X_test_ngrams), 
-                             torch.from_numpy(X_test_punct),
-                             torch.from_numpy(Y_test.astype('float32')))
+  X_test_ngrams = np.memmap(path + 'features_ngrams_X_predict.npy', dtype='float32', mode='r', shape=(conf_model['rows_predict'], conf_model['ngrams']))
+  X_test_punct = np.memmap(path + 'features_punct_X_predict.npy', dtype='float32', mode='r', shape=(conf_model['rows_predict'], conf_model['punct']))
+
+  return AuthorshipDatasetPrediction(torch.from_numpy(X_test_ngrams), 
+                             torch.from_numpy(X_test_punct))
 
 def binary_accuracy(y_pred, y_test):
 
@@ -265,7 +282,7 @@ def train(model, train_loader, criterion, optimizer, config):
           "Train Loss": epoch_loss/len(train_loader)})
   torch.save(model.state_dict(), config.path_dataset+"model.pt")
 
-def test(model, test_loader, log=False):
+def dev(model, test_loader, log=False):
 
 
 
@@ -301,6 +318,32 @@ def test(model, test_loader, log=False):
     return y_pred_list
 
 
+def test(model, test_loader):
+
+
+
+    model.eval()
+    y_pred_list = []
+    # Run the model on some test examples
+    with torch.no_grad():
+        correct, total = 0, 0
+        for X_ngrams_batch, X_punct_batch in test_loader:
+            X_ngrams_batch,X_punct_batch  = (X_ngrams_batch.to(device), 
+                                                    X_punct_batch.to(device))
+                                 
+            outputs = model(X_ngrams_batch, X_punct_batch)
+            y_test_pred = torch.sigmoid(outputs)
+           
+            #y_pred_tag = torch.round(y_test_pred)
+            #y_pred_list.extend(y_pred_tag.cpu().numpy())
+            y_pred_list.extend(y_test_pred.cpu().numpy())
+
+
+    y_pred_list = [a.squeeze().tolist() for a in y_pred_list]
+    
+    return y_pred_list
+
+
 
 
 
@@ -317,6 +360,14 @@ def predict_model(conf):
 
   #model
   model = AuthorshipClassification(data_input_size).to(device)
-  model.load_state_dict(torch.load(conf['path_dataset']+"model.pt"))
+  model.load_state_dict(torch.load(conf['path_model']+"model.pt"))
 
   y_pred = test(model, test_loader)
+
+  print(y_pred)
+
+  path_predict = conf['path_predict']+"predict.csv"
+  predictions = pd.read_csv(path_predict)
+  predictions["value"] = y_pred
+  predictions.to_csv(path_predict, index=False)
+  predictions.to_json(conf['path_predict']+"predict.jsonl", orient='records', lines=True)

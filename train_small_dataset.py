@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 from model import model_pipeline, predict_model
-from vectorizer import vectorize_dataset
+from vectorizer import vectorize_dataset, vectorize_predict
 from sklearn.model_selection import train_test_split
 
 
@@ -14,10 +14,8 @@ from sklearn.model_selection import train_test_split
 
 sklearn_random = 20
 
-def store_pandas(dataframe, config):
+def store_pandas(dataframe, path):
 
-
-    path = config['path_dataset']+"train.csv"
 
     # if file does not exist write header 
     if not os.path.isfile(path):
@@ -29,6 +27,7 @@ def store_pandas(dataframe, config):
 def create_dataset(config):
     df_texts = pd.read_json(config['path_training'], lines=True, chunksize=1000)
     df_truth = pd.read_json(config['path_training_truth'], lines=True, chunksize=1000)
+    path = config['path_dataset']+"train.csv"
 
     i =0
     for texts, truth in zip(df_texts, df_truth):
@@ -40,12 +39,30 @@ def create_dataset(config):
 
         print(f"save chunk [{i*1000},{(i+1)*1000}]")
         i += 1
-        store_pandas(df_join_training_data, config)
+        store_pandas(df_join_training_data, path)
     
     df_texts=None
     df_truth=None
 
     randomize_dataset(config)
+
+
+def parse_predict_data(config):
+    df_texts = pd.read_json(config['path_predict'], lines=True, chunksize=1000)    
+    path = config['path_dataset']+"predict.csv"
+    i =0
+    for chunk in df_texts:
+        print(len(chunk))
+        chunk[['text1','text2']] = pd.DataFrame(chunk.pair.tolist(), index= chunk.index)
+        chunk = chunk.drop(columns=["pair", "fandoms"])
+
+        print(f"save chunk [{i*1000},{(i+1)*1000}]")
+        i += 1
+        store_pandas(chunk, path)
+    
+    df_texts=None
+    df_truth=None
+
 
 
 def randomize_dataset(config):
@@ -80,6 +97,8 @@ if __name__ == "__main__":
     config = dict(
         path_training="data/pan20-authorship-verification-training-small.jsonl",
         path_training_truth="data/pan20-authorship-verification-training-small-truth.jsonl",
+        path_predict="data/pan20-authorship-verification-training-small.jsonl",
+        path_predict_truth="data/pan20-authorship-verification-training-small-truth.jsonl",        
         epochs = 10,
         batch_size = 128,
         learning_rate = 0.001,
@@ -93,17 +112,19 @@ if __name__ == "__main__":
         
     )
 
-    task = "train"
+    task = "predict"
 
     if task == "train":
 
-        create_dataset(config)
-        vectorize_dataset(config)
+        #create_dataset(config)
+        #vectorize_dataset(config)
         model_pipeline(config)
 
     elif task == "predict":
 
-        predict_model(config)
+        #parse_predict_data(config)
+        vectorize_predict(config)
+        #predict_model(config)
 
 
 
