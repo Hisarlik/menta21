@@ -32,8 +32,7 @@ torch.cuda.manual_seed_all(hash("so runs are repeatable") % 2**28 - 1)
 # Device configuration
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-# Wandb Login
-wandb.login()
+
 
 
 class AuthorshipDataset(Dataset):
@@ -220,7 +219,7 @@ def get_data(conf, type_data="train"):
 def get_predict_data(conf):
 
   print(conf)
-  path = conf['path_predict']
+  path = conf['path_model']
   conf_model = joblib.load(path+'conf_predict.pkl')
   print(conf_model)
 
@@ -349,13 +348,13 @@ def predict_model(conf):
 
   #model
   model = AuthorshipClassification(data_input_size).to(device)
-  model.load_state_dict(torch.load(conf['path_model']+"model.pt"))
+  model.load_state_dict(torch.load(conf['path_model']+"model.pt", map_location=torch.device('cpu')))
 
   y_pred = test(model, test_loader)
 
-  path_predict = conf['path_predict']+"predict.csv"
+  path_predict = conf['path_model']+"predict_id.csv"
   predictions = pd.read_csv(path_predict)
   predictions["value"] = y_pred
   predictions.to_csv(path_predict, index=False)
-  predictions.to_json(conf['path_predict']+"predict.jsonl", orient='records', lines=True)
+  predictions.to_json(conf['path_predict']+"answers.jsonl", orient='records', lines=True)
   print("End prediction")

@@ -109,7 +109,6 @@ def vectorize_dataset(config):
     i = 0
     for chunk in reader:
         size = len(chunk)
-        print(len(chunk))
         id_low = chunksize*i
         id_high =  id_low +size
         x1 = pipe_ngrams.transform(chunk['text1'])
@@ -129,7 +128,6 @@ def vectorize_dataset(config):
     i = 0
     for chunk in reader:
         size = len(chunk)
-        print(len(chunk))
         id_low = chunksize*i
         id_high =  id_low +size
         x1 = pipe_punct.transform(chunk['text1'])
@@ -154,8 +152,9 @@ def vectorize_predict(config):
     conf = {}
 
     path_model = config['path_model']
+    path_model_data = path_model+"temp.csv"
+    
     path_predict = config['path_predict']
-    path_predict_data = path_model+"temp.csv"
  
     pipe_ngrams = joblib.load( path_model+'pipe_ngrams.pkl')
     pipe_punct = joblib.load(path_model+'pipe_punct.pkl')  
@@ -163,15 +162,15 @@ def vectorize_predict(config):
 
     ############### test #####################################
     print("Loading predict data")
-    predict_df = pd.read_csv(path_predict_data)
+    predict_df = pd.read_csv(path_model_data)
     predict_length = len(predict_df['text1'])
     print("Number of predictions",predict_length)
 
     print("Transform ngrams")
     transformer_size = len(pipe_ngrams.named_steps['tfidf_ngrams'].get_feature_names())
-    X_predict = np.memmap(path_predict + 'features_ngrams_X_predict.npy', dtype='float32', mode='w+', shape=(predict_length, transformer_size))
+    X_predict = np.memmap(path_model + 'features_ngrams_X_predict.npy', dtype='float32', mode='w+', shape=(predict_length, transformer_size))
     chunksize = 1000
-    reader = pd.read_csv(path_predict_data, iterator=True, chunksize=chunksize)
+    reader = pd.read_csv(path_model_data, iterator=True, chunksize=chunksize)
     i = 0
     for chunk in reader:
         size = len(chunk)
@@ -189,8 +188,8 @@ def vectorize_predict(config):
 
     print("Transform punctuation")
     transformer_size = len(pipe_punct.named_steps['tfidf_punctuation'].get_feature_names())
-    X_predict = np.memmap(path_predict + 'features_punct_X_predict.npy', dtype='float32', mode='w+', shape=(predict_length, transformer_size))
-    reader = pd.read_csv(path_predict_data, iterator=True, chunksize=chunksize)
+    X_predict = np.memmap(path_model + 'features_punct_X_predict.npy', dtype='float32', mode='w+', shape=(predict_length, transformer_size))
+    reader = pd.read_csv(path_model_data, iterator=True, chunksize=chunksize)
     i = 0
     for chunk in reader:
         size = len(chunk)
@@ -205,5 +204,5 @@ def vectorize_predict(config):
     X_predict.flush()
     X_predict = None
 
-    joblib.dump(conf, path_predict+'conf_predict.pkl')
+    joblib.dump(conf, path_model+'conf_predict.pkl')
 

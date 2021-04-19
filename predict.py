@@ -25,24 +25,21 @@ def delete_file(filePath):
     if os.path.exists(filePath):
         os.remove(filePath)
     else:
-        print("Can not delete the file as it doesn't exists")
+        print("Warning: Can not delete the file as it doesn't exists")
 
 def parse_predict_data(config):
     df_texts = pd.read_json(config['path_data'], lines=True, chunksize=50)    
 
-
-
-    path_predict = config['path_predict']+"predict.csv"
-
-
+    path_predict_id = config['path_model']+"predict_id.csv"
     path_temp = config['path_model']+"temp.csv"
+
     delete_file(path_temp)
-    delete_file(path_predict)
+    delete_file(path_predict_id)
     for chunk in df_texts:
         chunk[['text1','text2']] = pd.DataFrame(chunk.pair.tolist(), index= chunk.index)
         chunk = chunk.drop(columns=["pair", "fandoms"])
         store_pandas(chunk, path_temp)
-        store_pandas(chunk["id"], path_predict)       
+        store_pandas(chunk["id"], path_predict_id)       
 
 
 
