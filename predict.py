@@ -7,12 +7,6 @@ from sklearn.model_selection import train_test_split
 
 
 
-#path_training_small_truth = "data/pan20-authorship-verification-training-small-truth.jsonl"
-#path_training_small = "data/pan20-authorship-verification-training-small.jsonl"
-#path_training_large_truth = "data/pan20-authorship-verification-training-large-truth.jsonl"
-#path_training_large = "data/pan20-authorship-verification-training-large.jsonl"
-
-
 sklearn_random = 20
 
 def store_pandas(dataframe, path):
@@ -35,7 +29,7 @@ def delete_file(filePath):
 
 def parse_predict_data(config):
     df_texts = pd.read_json(config['path_data'], lines=True, chunksize=50)    
-    print(df_texts)
+
 
 
     path_predict = config['path_predict']+"predict.csv"
@@ -43,14 +37,10 @@ def parse_predict_data(config):
 
     path_temp = config['path_model']+"temp.csv"
     delete_file(path_temp)
-    i =0
+    delete_file(path_predict)
     for chunk in df_texts:
-        print(len(chunk))
         chunk[['text1','text2']] = pd.DataFrame(chunk.pair.tolist(), index= chunk.index)
         chunk = chunk.drop(columns=["pair", "fandoms"])
-
-        print(f"save chunk [{i*50},{(i+1)*50}]")
-        i += 1
         store_pandas(chunk, path_temp)
         store_pandas(chunk["id"], path_predict)       
 
@@ -82,7 +72,7 @@ if __name__ == "__main__":
 
     config = dict(
         path_data= pairs,
-        path_model = "data/model/",
+        path_model = "data/500/",
         path_predict = pred,
         batch_size = 128
 

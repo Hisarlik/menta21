@@ -7,13 +7,11 @@ import scipy
 import joblib
 from scipy.stats import uniform
 
-from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import RandomizedSearchCV
 from sklearn.metrics import f1_score, classification_report, confusion_matrix
 from sklearn.pipeline import Pipeline,FeatureUnion
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.svm import SVC
 from sklearn.model_selection import KFold
 from sklearn.metrics import f1_score
 
@@ -22,7 +20,6 @@ from torch import nn
 from torch import optim
 from torch.utils.data import Dataset, DataLoader
 
-import onnx
 import wandb 
 
 
@@ -38,15 +35,6 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 # Wandb Login
 wandb.login()
 
-config = dict(
-    epochs = 10,
-    batch_size = 80,
-    learning_rate = 0.001,
-    dataset = "Authorship 2000",
-    architecture = "Dense:  Input, Layer 512, relu, batchnorm 512 , Layer 64, relu, batchnorm 64, dropout 0.1, output", 
-    criterion = "BCEWithLogitsLoss",
-    optimizer = "Adam"
-)
 
 class AuthorshipDataset(Dataset):
 
@@ -162,15 +150,15 @@ def model_pipeline(hyperparameters):
     X_ngrams, X_punct, y_data = get_data(hyperparameters)
 
     f1_scores = []
+    i=1
     for train_index, test_index in KFold(n_splits=5).split(X_ngrams):
         
 
         with wandb.init(project="authorship", config=hyperparameters):
             
             config = wandb.config
-            print(train_index) 
-            print(test_index)
 
+            print(f"Kfold model: {i}")
             train_data = AuthorshipDataset(torch.from_numpy(X_ngrams[train_index]), 
                                  torch.from_numpy(X_punct[train_index]),                            
                                  torch.from_numpy(y_data.astype('float32')[train_index]))
@@ -203,13 +191,14 @@ def model_pipeline(hyperparameters):
             print("Calling dev")
             y_pred = dev(model, dev_loader)
 
-            print(classification_report(y_data.astype('float32')[test_index], y_pred))
+            print("Classification report:",classification_report(y_data.astype('float32')[test_index], y_pred))
             f1_score_model = f1_score(y_data.astype('float32')[test_index], y_pred)
-            print(f1_score_model)
+            print("f1_score",f1_score_model)
             f1_scores.append(f1_score_model)
-            print("Fin del modelo")
-    print(f1_scores)
-    print(np.array(np.mean(f1_scores, axis=0)))
+            print(f"End model {i}")
+            i+=1
+    print("f1score models:",f1_scores)
+    print("mean f1score",np.array(np.mean(f1_scores, axis=0)))
 
 
 
@@ -364,10 +353,9 @@ def predict_model(conf):
 
   y_pred = test(model, test_loader)
 
-  print(y_pred)
-
   path_predict = conf['path_predict']+"predict.csv"
   predictions = pd.read_csv(path_predict)
   predictions["value"] = y_pred
   predictions.to_csv(path_predict, index=False)
   predictions.to_json(conf['path_predict']+"predict.jsonl", orient='records', lines=True)
+  print("End prediction")

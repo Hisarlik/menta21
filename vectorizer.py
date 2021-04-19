@@ -37,21 +37,22 @@ def define_vectorizer(type):
 
 def fit_vectorizer(config):
 
-    LIMIT_VECTORIZER=15000
+    limit_vectorizer = config['limit_data_vectorizer']
 
     path = config['path_dataset']
     train_data = path+"train.csv"
 
-    print("fit")
+
     ## Load data
     data_df = pd.read_csv(train_data)   
-    if len(data_df)>LIMIT_VECTORIZER:
-        data_df = data_df[:LIMIT_VECTORIZER]
+    if len(data_df)>limit_vectorizer:
+        data_df = data_df[:limit_vectorizer]
     texts = data_df['text1'] 
 
-    print("Size:", len(texts))
-    print("Labels:", data_df["same"].value_counts()) 
-    print("Labels")
+    print("Data Loaded for vectorization:")
+    print("ngrams and  punctuation vectorizer:", len(texts))
+    print("labels vectorizer:", data_df["same"].value_counts()) 
+
     ## labels
     label_encoder = LabelEncoder().fit(data_df["same"])
     
@@ -84,11 +85,13 @@ def vectorize_dataset(config):
 
     ############# fit ###################################
 
-    print("Start vect")
+    print("Start vectorization")
     pipe_ngrams, pipe_punct, label_encoder =  fit_vectorizer(config)
 
     ############### train #####################################
-    print("train data")
+    print("Loading train data")
+
+    print("Transform labels")
     train_df = pd.read_csv(train_data)
     train_length = len(train_df['text1'])
     Y_train = label_encoder.transform(train_df["same"].values)
@@ -98,6 +101,7 @@ def vectorize_dataset(config):
     Y_train_memmap.flush()
     Y_train_memmap = None
 
+    print("Transform ngrams")
     transformer_size = len(pipe_ngrams.named_steps['tfidf_ngrams'].get_feature_names())
     X_train = np.memmap(path + 'features_ngrams_X_train.npy', dtype='float32', mode='w+', shape=(train_length, transformer_size))
     chunksize = 1000
@@ -108,17 +112,17 @@ def vectorize_dataset(config):
         print(len(chunk))
         id_low = chunksize*i
         id_high =  id_low +size
-        print(f"Iterator: [{id_low},{id_high}]")
         x1 = pipe_ngrams.transform(chunk['text1'])
         x2 = pipe_ngrams.transform(chunk['text2'])
         X_train[id_low:id_high] = np.abs(x1-x2).todense()
         i+= 1
-    print(X_train.shape)
+    print("Shape ngrams transformed data:", X_train.shape)
     conf['rows_train'] = X_train.shape[0]
     conf['ngrams'] = X_train.shape[1]
     X_train.flush()
     X_train = None
 
+    print("Transform punctuation")
     transformer_size = len(pipe_punct.named_steps['tfidf_punctuation'].get_feature_names())
     X_train = np.memmap(path + 'features_punct_X_train.npy', dtype='float32', mode='w+', shape=(train_length, transformer_size))
     reader = pd.read_csv(train_data, iterator=True, chunksize=chunksize)
@@ -128,12 +132,11 @@ def vectorize_dataset(config):
         print(len(chunk))
         id_low = chunksize*i
         id_high =  id_low +size
-        print(f"Iterator: [{id_low},{id_high}]")
         x1 = pipe_punct.transform(chunk['text1'])
         x2 = pipe_punct.transform(chunk['text2'])
         X_train[id_low:id_high] = np.abs(x1-x2).todense()
         i+= 1
-    print(X_train.shape)
+    print("Shape punctuation transformed data:",X_train.shape)
     conf['punct'] = X_train.shape[1]
     X_train.flush()
     X_train = None
@@ -156,14 +159,15 @@ def vectorize_predict(config):
  
     pipe_ngrams = joblib.load( path_model+'pipe_ngrams.pkl')
     pipe_punct = joblib.load(path_model+'pipe_punct.pkl')  
-
+    print("vectorizers loaded")
 
     ############### test #####################################
-    print("predict data")
+    print("Loading predict data")
     predict_df = pd.read_csv(path_predict_data)
     predict_length = len(predict_df['text1'])
-    print(predict_length)
+    print("Number of predictions",predict_length)
 
+    print("Transform ngrams")
     transformer_size = len(pipe_ngrams.named_steps['tfidf_ngrams'].get_feature_names())
     X_predict = np.memmap(path_predict + 'features_ngrams_X_predict.npy', dtype='float32', mode='w+', shape=(predict_length, transformer_size))
     chunksize = 1000
@@ -171,35 +175,32 @@ def vectorize_predict(config):
     i = 0
     for chunk in reader:
         size = len(chunk)
-        print(len(chunk))
         id_low = chunksize*i
         id_high =  id_low +size
-        print(f"Iterator: [{id_low},{id_high}]")
         x1 = pipe_ngrams.transform(chunk['text1'])
         x2 = pipe_ngrams.transform(chunk['text2'])
         X_predict[id_low:id_high] = np.abs(x1-x2).todense()
         i+= 1
-    print(X_predict.shape)
+    print("Shape ngrams transformed data:",X_predict.shape)
     conf['rows_predict'] = X_predict.shape[0]
     conf['ngrams'] = X_predict.shape[1]
     X_predict.flush()
     X_predict = None
 
+    print("Transform punctuation")
     transformer_size = len(pipe_punct.named_steps['tfidf_punctuation'].get_feature_names())
     X_predict = np.memmap(path_predict + 'features_punct_X_predict.npy', dtype='float32', mode='w+', shape=(predict_length, transformer_size))
     reader = pd.read_csv(path_predict_data, iterator=True, chunksize=chunksize)
     i = 0
     for chunk in reader:
         size = len(chunk)
-        print(len(chunk))
         id_low = chunksize*i
         id_high =  id_low +size
-        print(f"Iterator: [{id_low},{id_high}]")
         x1 = pipe_punct.transform(chunk['text1'])
         x2 = pipe_punct.transform(chunk['text2'])
         X_predict[id_low:id_high] = np.abs(x1-x2).todense()
         i+= 1
-    print(X_predict.shape)
+    print("Shape punctuation transformed data:",X_predict.shape)
     conf['punct'] = X_predict.shape[1]
     X_predict.flush()
     X_predict = None
