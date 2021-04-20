@@ -270,7 +270,7 @@ def train(model, train_loader, criterion, optimizer, config):
           "Train Loss": epoch_loss/len(train_loader)})
   torch.save(model.state_dict(), config.path_dataset+"model.pt")
 
-def dev(model, test_loader, log=False):
+def dev(model, test_loader, log=True):
 
 
 

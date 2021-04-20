@@ -97,17 +97,17 @@ if __name__ == "__main__":
         architecture = "Dense:  Input, Layer 512, relu, batchnorm 512 , Layer 64, relu, batchnorm 64, dropout 0.1, output", 
         criterion = "BCEWithLogitsLoss",
         optimizer = "Adam",
-        limit_dataset = 500,
-        path_dataset = "data/500/",
-        limit_data_vectorizer = 500
+        limit_dataset = None,
+        path_dataset = "data/small19/",
+        limit_data_vectorizer = 15000
         
     )
 
     # Wandb Login
     wandb.login()
 
-    create_dataset(config)
-    vectorize_dataset(config)
+    #create_dataset(config)
+    #vectorize_dataset(config)
     model_pipeline(config)
 
 
