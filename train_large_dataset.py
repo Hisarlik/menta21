@@ -2,7 +2,7 @@ import os
 import pandas as pd
 import wandb
 from model import model_pipeline, predict_model
-from vectorizer_small_dataset import vectorize_dataset, vectorize_predict
+from vectorizer_large_dataset import vectorize_dataset, vectorize_predict
 from sklearn.model_selection import train_test_split
 
 
@@ -88,8 +88,8 @@ if __name__ == "__main__":
     
 
     config = dict(
-        path_training="data/pan20-authorship-verification-training-small.jsonl",
-        path_training_truth="data/pan20-authorship-verification-training-small-truth.jsonl",     
+        path_training="data/pan20-authorship-verification-training-large.jsonl",
+        path_training_truth="data/pan20-authorship-verification-training-large-truth.jsonl",     
         epochs = 50,
         batch_size = 128,
         learning_rate = 0.001,
@@ -98,7 +98,7 @@ if __name__ == "__main__":
         criterion = "BCEWithLogitsLoss",
         optimizer = "Adam",
         limit_dataset = None,
-        path_dataset = "data/small19/",
+        path_dataset = "data/large/",
         limit_data_vectorizer = 15000
         
     )
