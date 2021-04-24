@@ -86,18 +86,14 @@ def randomize_dataset(config):
     dev.to_csv(path_dev, index=False)
     test.to_csv(path_test, index=False)
 
-
-
-if __name__ == "__main__":
-
-    
+def train_model(epochs, batch_size, learning_rate=0.001):
 
     config = dict(
         path_training="data/pan20-authorship-verification-training-large.jsonl",
         path_training_truth="data/pan20-authorship-verification-training-large-truth.jsonl",     
-        epochs = 50,
-        batch_size = 128,
-        learning_rate = 0.001,
+        epochs = epochs,
+        batch_size = batch_size,
+        learning_rate = learning_rate,
         dataset = "Authorship 2000",
         architecture = "Dense:  Input, Layer 512, relu, batchnorm 512 , Layer 64, relu, batchnorm 64, dropout 0.1, output", 
         criterion = "BCEWithLogitsLoss",
@@ -108,12 +104,28 @@ if __name__ == "__main__":
         
     )
 
+
+    result = model_pipeline(config)
+    
+
+
+
+
+if __name__ == "__main__":
+
     # Wandb Login
     wandb.login()
 
-    create_dataset(config)
-    vectorize_dataset(config)
-    model_pipeline(config)
+    #create_dataset(config)
+    #vectorize_dataset(config)
+    train_model(1, 512)
+    train_model(2, 1024)
+
+
+
+  
+
+
 
 
 
