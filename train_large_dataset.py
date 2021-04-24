@@ -1,8 +1,8 @@
 import os
 import pandas as pd
 import wandb
-from model import model_pipeline, predict_model
-from vectorizer_large_dataset import vectorize_dataset, vectorize_predict
+from model_large_dataset import model_pipeline, predict_model
+from vectorizers_large_dataset import vectorize_dataset, vectorize_predict
 from sklearn.model_selection import train_test_split
 
 
@@ -68,9 +68,11 @@ def parse_predict_data(config):
 
 def randomize_dataset(config):
 
-    path = config['path_dataset']+"train.csv"
+    path_train = config['path_dataset']+"train.csv"
+    path_dev = config['path_dataset']+"dev.csv"
+    path_test = config['path_dataset']+"test.csv"
 
-    dataset = pd.read_csv(path)
+    dataset = pd.read_csv(path_train)
 
     dataset = dataset.sample(frac=1).reset_index(drop=True)
 
@@ -78,8 +80,11 @@ def randomize_dataset(config):
     if limit_dataset:
         dataset = dataset[:limit_dataset]
 
-    dataset.to_csv(path, index=False)
-
+    dataset, test = train_test_split(dataset, test_size=0.15, random_state=sklearn_random)
+    dataset, dev = train_test_split(dataset, test_size=0.18, random_state=sklearn_random)
+    dataset.to_csv(path_train, index=False)
+    dev.to_csv(path_dev, index=False)
+    test.to_csv(path_test, index=False)
 
 
 
