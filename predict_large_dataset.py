@@ -1,8 +1,8 @@
 import os
 import argparse
 import pandas as pd
-from model import model_pipeline, predict_model
-from vectorizer import vectorize_dataset, vectorize_predict
+from model_large_dataset import model_pipeline, predict_model
+from vectorizers_large_dataset import vectorize_dataset, vectorize_predict
 from sklearn.model_selection import train_test_split
 
 
