@@ -156,3 +156,4 @@ wandb
 author
 launch.json
 *.onnx
+*.zip

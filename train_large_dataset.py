@@ -106,7 +106,7 @@ def train_model(epochs, batch_size, learning_rate=0.001):
 
 
     result = model_pipeline(config)
-    
+
 
 
 
@@ -118,8 +118,23 @@ if __name__ == "__main__":
 
     #create_dataset(config)
     #vectorize_dataset(config)
-    train_model(1, 512)
-    train_model(2, 1024)
+
+
+
+    train_model(1, 368, 0.00005)
+    train_model(5, 368, 0.00005)
+    train_model(10, 368, 0.00005)
+
+
+     
+
+
+
+
+
+
+
+
 
 
 
