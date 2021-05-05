@@ -1,6 +1,7 @@
 import random
 import string
 
+import os
 import pandas as pd
 import numpy as np
 import scipy
@@ -352,9 +353,12 @@ def predict_model(conf):
 
   y_pred = test(model, test_loader)
 
-  path_predict = conf['path_model']+"predict_id.csv"
-  predictions = pd.read_csv(path_predict)
+  path_predict_id = conf['path_model']+"predict_id.csv"
+  predictions = pd.read_csv(path_predict_id)
   predictions["value"] = y_pred
-  predictions.to_csv(path_predict, index=False)
+  predictions.to_csv(path_predict_id, index=False)
+
+  if not os.path.exists(conf['path_predict']):
+    os.makedirs(conf['path_predict'])
   predictions.to_json(conf['path_predict']+"answers.jsonl", orient='records', lines=True)
   print("End prediction")
