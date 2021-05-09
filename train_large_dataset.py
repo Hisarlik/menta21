@@ -85,26 +85,6 @@ def randomize_dataset(config):
     dev.to_csv(path_dev, index=False)
     test.to_csv(path_test, index=False)
 
-def train_model(epochs, batch_size, learning_rate=0.001):
-
-    config = dict(
-        path_training="data/pan20-authorship-verification-training-large.jsonl",
-        path_training_truth="data/pan20-authorship-verification-training-large-truth.jsonl",     
-        epochs = epochs,
-        batch_size = batch_size,
-        learning_rate = learning_rate,
-        dataset = "Authorship 2000",
-        architecture = "Dense:  Input, Layer 512, relu, batchnorm 512 , Layer 64, relu, batchnorm 64, dropout 0.1, output", 
-        criterion = "BCEWithLogitsLoss",
-        optimizer = "Adam",
-        limit_dataset = None,
-        path_dataset = "data/large/",
-        limit_data_vectorizer = 15000
-        
-    )
-
-
-    result = model_pipeline(config)
 
 
 
@@ -113,29 +93,26 @@ def train_model(epochs, batch_size, learning_rate=0.001):
 if __name__ == "__main__":
 
 
+    config = dict(
+        path_training="data/pan20-authorship-verification-training-large.jsonl",
+        path_training_truth="data/pan20-authorship-verification-training-large-truth.jsonl",     
+        epochs = 10,
+        batch_size = 368,
+        learning_rate = 0.00005,
+        dataset = "Authorship 2000",
+        architecture = "Dense:  Input, Layer 512, relu, batchnorm 512 , Layer 64, relu, batchnorm 64, dropout 0.1, output", 
+        criterion = "BCEWithLogitsLoss",
+        optimizer = "Adam",
+        limit_dataset = 2000,
+        path_dataset = "data/example_large/",
+        limit_data_vectorizer = 2000
+        
+    )
 
     create_dataset(config)
     vectorize_dataset(config)
-    train_model(10, 368, 0.00005)
+    model_pipeline(config)
 
 
      
-
-
-
-
-
-
-
-
-
-
-
-  
-
-
-
-
-
-
 

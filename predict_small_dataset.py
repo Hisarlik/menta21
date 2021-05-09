@@ -69,7 +69,7 @@ if __name__ == "__main__":
 
     config = dict(
         path_data= pairs,
-        path_model = "data/small/",
+        path_model = "data/example_small/",
         path_predict = pred,
         batch_size = 128
 

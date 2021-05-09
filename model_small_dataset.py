@@ -232,7 +232,7 @@ def train(model, train_loader, criterion, optimizer, config):
 
 
   model.train()
-  for epoch in range(1, config.epochs+1):
+  for epoch in range(1, config['epochs']+1):
     epoch_loss = 0
     epoch_acc = 0
     for X_ngrams_batch, X_punct_batch, y_batch in train_loader:
@@ -254,7 +254,7 @@ def train(model, train_loader, criterion, optimizer, config):
       epoch_acc += acc.item()
     print(f'Epoch {epoch}: | Loss: {epoch_loss/len(train_loader):.5f} | Acc: {epoch_acc/len(train_loader):.3f}')  
 
-  torch.save(model.state_dict(), config.path_dataset+"model.pt")
+  torch.save(model.state_dict(), config['path_dataset']+"model.pt")
 
 def dev(model, test_loader, log=True):
 

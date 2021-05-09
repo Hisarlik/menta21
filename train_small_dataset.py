@@ -96,9 +96,9 @@ if __name__ == "__main__":
         architecture = "Dense:  Input, Layer 512, relu, batchnorm 512 , Layer 64, relu, batchnorm 64, dropout 0.1, output", 
         criterion = "BCEWithLogitsLoss",
         optimizer = "Adam",
-        limit_dataset = None,
-        path_dataset = "data/small19/",
-        limit_data_vectorizer = 15000
+        limit_dataset = 2000,
+        path_dataset = "data/example_small/",
+        limit_data_vectorizer = 2000
         
     )
 
