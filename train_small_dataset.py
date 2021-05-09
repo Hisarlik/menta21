@@ -1,6 +1,5 @@
 import os
 import pandas as pd
-import wandb
 from model_small_dataset import model_pipeline, predict_model
 from vectorizers_small_dataset import vectorize_dataset, vectorize_predict
 from sklearn.model_selection import train_test_split
@@ -103,8 +102,6 @@ if __name__ == "__main__":
         
     )
 
-    # Wandb Login
-    wandb.login()
 
     create_dataset(config)
     vectorize_dataset(config)

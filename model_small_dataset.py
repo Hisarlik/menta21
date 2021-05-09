@@ -21,7 +21,6 @@ from torch import nn
 from torch import optim
 from torch.utils.data import Dataset, DataLoader
 
-import wandb 
 
 
 torch.backends.cudnn.deterministic = True
@@ -88,7 +87,7 @@ class AuthorshipClassification(nn.Module):
     print("input_size_punct:",input_size[1])
     self.layer1_punct = nn.Linear(input_size[1], 16)
     self.layer2_punct = nn.Linear(16, 6)
-    #self.layer3_punct = nn.Linear(4, 2)
+
 
     self.layer1_join = nn.Linear(12, 4)
     self.layer2_join = nn.Linear(4, 2)
@@ -97,9 +96,7 @@ class AuthorshipClassification(nn.Module):
     self.selu = nn.SELU()
     self.dropout = nn.Dropout(p=0.1)
     self.batchnorm1 = nn.BatchNorm1d(128)
-    #self.batchnorm2 = nn.BatchNorm1d(64)
-    #self.batchnorm3 = nn.BatchNorm1d(32)
-    #self.batchnorm4 = nn.BatchNorm1d(16)
+
 
   
   def forward(self, inputs_ngrams, inputs_punct):
@@ -107,19 +104,16 @@ class AuthorshipClassification(nn.Module):
     x_grams = self.layer1_ngrams(inputs_ngrams)
     x_grams = self.selu(x_grams)
     x_grams = self.batchnorm1(x_grams)
-    #x_grams = self.dropout(x_grams)
+
     x_grams = self.layer2_ngrams(x_grams)
     x_grams = self.selu(x_grams)
-    #x_grams = self.batchnorm2(x_grams)
-    #x_grams = self.dropout(x_grams)
+
     x_grams = self.layer3_ngrams(x_grams)
     x_grams = self.selu(x_grams)
-    #x_grams = self.batchnorm3(x_grams)
-    #x_grams = self.dropout(x_grams)
+
     x_grams = self.layer4_ngrams(x_grams)
     x_grams = self.selu(x_grams)  
-    #x_grams = self.batchnorm4(x_grams) 
-    #x_grams = self.dropout(x_grams)  
+
     x_grams = self.layer5_ngrams(x_grams)
     x_grams = self.selu(x_grams)
 
@@ -127,8 +121,7 @@ class AuthorshipClassification(nn.Module):
     x_punct = self.selu(x_punct)
     x_punct = self.layer2_punct(x_punct)
     x_punct = self.selu(x_punct)
-    #x_punct = self.relu(x_punct)
-    #x_punct = self.layer3_punct(x_punct)
+
 
 
     x = torch.cat((x_grams, x_punct), dim=1)
@@ -142,61 +135,57 @@ class AuthorshipClassification(nn.Module):
     return output
 
 
-def model_pipeline(hyperparameters):
+def model_pipeline(config):
     
     
     
     # get_data
-    X_ngrams, X_punct, y_data = get_data(hyperparameters)
+    X_ngrams, X_punct, y_data = get_data(config)
 
     f1_scores = []
     i=1
     for train_index, test_index in KFold(n_splits=5).split(X_ngrams):
         
 
-        with wandb.init(project="authorship", config=hyperparameters):
-            
-            config = wandb.config
-
-            print(f"Kfold model: {i}")
-            train_data = AuthorshipDataset(torch.from_numpy(X_ngrams[train_index]), 
+      print(f"Kfold model: {i}")
+      train_data = AuthorshipDataset(torch.from_numpy(X_ngrams[train_index]), 
                                  torch.from_numpy(X_punct[train_index]),                            
                                  torch.from_numpy(y_data.astype('float32')[train_index]))
 
 
-            dev_data =  AuthorshipDataset(torch.from_numpy(X_ngrams[test_index]), 
+      dev_data =  AuthorshipDataset(torch.from_numpy(X_ngrams[test_index]), 
                                  torch.from_numpy(X_punct[test_index]),                           
                                  torch.from_numpy(y_data.astype('float32')[test_index]))
 
 
-            data_input_size = train_data.vector_size()
+      data_input_size = train_data.vector_size()
 
-            # data_loaders
-            train_loader = DataLoader(dataset=train_data, batch_size=config.batch_size, shuffle=False)
-            dev_loader = DataLoader(dataset=dev_data, batch_size=config.batch_size, shuffle=False)
+      # data_loaders
+      train_loader = DataLoader(dataset=train_data, batch_size=config['batch_size'], shuffle=False)
+      dev_loader = DataLoader(dataset=dev_data, batch_size=config['batch_size'], shuffle=False)
 
 
-            #model
-            model = AuthorshipClassification(data_input_size).to(device)
+      #model
+      model = AuthorshipClassification(data_input_size).to(device)
 
-            # criterion and optimizer
-            criterion = nn.BCEWithLogitsLoss()
-            optimizer = optim.Adam(model.parameters(), lr=config.learning_rate)
+      # criterion and optimizer
+      criterion = nn.BCEWithLogitsLoss()
+      optimizer = optim.Adam(model.parameters(), lr=config['learning_rate'])
 
-            print(model)
+      print(model)
 
-            print("Calling train")
-            train(model, train_loader, criterion, optimizer, config)
+      print("Calling train")
+      train(model, train_loader, criterion, optimizer, config)
 
-            print("Calling dev")
-            y_pred = dev(model, dev_loader)
+      print("Calling dev")
+      y_pred = dev(model, dev_loader)
 
-            print("Classification report:",classification_report(y_data.astype('float32')[test_index], y_pred))
-            f1_score_model = f1_score(y_data.astype('float32')[test_index], y_pred)
-            print("f1_score",f1_score_model)
-            f1_scores.append(f1_score_model)
-            print(f"End model {i}")
-            i+=1
+      print("Classification report:",classification_report(y_data.astype('float32')[test_index], y_pred))
+      f1_score_model = f1_score(y_data.astype('float32')[test_index], y_pred)
+      print("f1_score",f1_score_model)
+      f1_scores.append(f1_score_model)
+      print(f"End model {i}")
+      i+=1
     print("f1score models:",f1_scores)
     print("mean f1score",np.array(np.mean(f1_scores, axis=0)))
 
@@ -240,8 +229,7 @@ def binary_accuracy(y_pred, y_test):
 
 def train(model, train_loader, criterion, optimizer, config):
 
-  # Tell wandb to watch 
-  wandb.watch(model, criterion, log_freq=10)
+
 
   model.train()
   for epoch in range(1, config.epochs+1):
@@ -265,10 +253,7 @@ def train(model, train_loader, criterion, optimizer, config):
       epoch_loss += loss.item()
       epoch_acc += acc.item()
     print(f'Epoch {epoch}: | Loss: {epoch_loss/len(train_loader):.5f} | Acc: {epoch_acc/len(train_loader):.3f}')  
-    wandb.log({
-          "Epoch": epoch,
-          "Train Accuracy": epoch_acc/len(train_loader),
-          "Train Loss": epoch_loss/len(train_loader)})
+
   torch.save(model.state_dict(), config.path_dataset+"model.pt")
 
 def dev(model, test_loader, log=True):
@@ -298,10 +283,6 @@ def dev(model, test_loader, log=True):
             y_pred_list.extend(y_pred_tag.cpu().numpy())
 
 
-
-        if log:
-          wandb.log({"test_accuracy": correct / total})
-
     y_pred_list = [a.squeeze().tolist() for a in y_pred_list]
     
     return y_pred_list
@@ -323,8 +304,6 @@ def test(model, test_loader):
             outputs = model(X_ngrams_batch, X_punct_batch)
             y_test_pred = torch.sigmoid(outputs)
            
-            #y_pred_tag = torch.round(y_test_pred)
-            #y_pred_list.extend(y_pred_tag.cpu().numpy())
             y_pred_list.extend(y_test_pred.cpu().numpy())
 
 

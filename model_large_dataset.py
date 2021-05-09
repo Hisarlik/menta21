@@ -20,7 +20,6 @@ from torch import nn
 from torch import optim
 from torch.utils.data import Dataset, DataLoader
 
-import wandb 
 
 
 torch.backends.cudnn.deterministic = True
@@ -87,7 +86,7 @@ class AuthorshipClassification(nn.Module):
     print("input_size_punct:",input_size[1])
     self.layer1_punct = nn.Linear(input_size[1], 16)
     self.layer2_punct = nn.Linear(16, 6)
-    #self.layer3_punct = nn.Linear(4, 2)
+
 
     self.layer1_join = nn.Linear(12, 4)
     self.layer2_join = nn.Linear(4, 2)
@@ -96,9 +95,7 @@ class AuthorshipClassification(nn.Module):
     self.selu = nn.SELU()
     self.dropout = nn.Dropout(p=0.1)
     self.batchnorm1 = nn.BatchNorm1d(128)
-    #self.batchnorm2 = nn.BatchNorm1d(64)
-    #self.batchnorm3 = nn.BatchNorm1d(32)
-    #self.batchnorm4 = nn.BatchNorm1d(16)
+
 
   
   def forward(self, inputs_ngrams, inputs_punct):
@@ -106,19 +103,16 @@ class AuthorshipClassification(nn.Module):
     x_grams = self.layer1_ngrams(inputs_ngrams)
     x_grams = self.selu(x_grams)
     x_grams = self.batchnorm1(x_grams)
-    #x_grams = self.dropout(x_grams)
+
     x_grams = self.layer2_ngrams(x_grams)
     x_grams = self.selu(x_grams)
-    #x_grams = self.batchnorm2(x_grams)
-    #x_grams = self.dropout(x_grams)
+ 
     x_grams = self.layer3_ngrams(x_grams)
     x_grams = self.selu(x_grams)
-    #x_grams = self.batchnorm3(x_grams)
-    #x_grams = self.dropout(x_grams)
+
     x_grams = self.layer4_ngrams(x_grams)
     x_grams = self.selu(x_grams)  
-    #x_grams = self.batchnorm4(x_grams) 
-    #x_grams = self.dropout(x_grams)  
+ 
     x_grams = self.layer5_ngrams(x_grams)
     x_grams = self.selu(x_grams)
 
@@ -126,8 +120,7 @@ class AuthorshipClassification(nn.Module):
     x_punct = self.selu(x_punct)
     x_punct = self.layer2_punct(x_punct)
     x_punct = self.selu(x_punct)
-    #x_punct = self.relu(x_punct)
-    #x_punct = self.layer3_punct(x_punct)
+
 
 
     x = torch.cat((x_grams, x_punct), dim=1)
@@ -141,20 +134,17 @@ class AuthorshipClassification(nn.Module):
     return output
 
 
-def model_pipeline(hyperparameters):
+def model_pipeline(config):
 
-  with wandb.init(project="authorship", config=hyperparameters):
+  print("Calling make")
+  model, train_loader, dev_loader, criterion, optimizer = make(config)
+  print(model)
 
-    config = wandb.config
-    print("Calling make")
-    model, train_loader, dev_loader, criterion, optimizer = make(config)
-    print(model)
+  print("Calling train")
+  train(model, train_loader, criterion, optimizer, config)
 
-    print("Calling train")
-    train(model, train_loader, criterion, optimizer, config)
-
-    print("Calling test")
-    return dev(model, dev_loader)
+  print("Calling test")
+  return dev(model, dev_loader)
 
 
 
@@ -191,8 +181,8 @@ def make(config):
   data_input_size = data_train.vector_size()
   
   # data_loaders
-  train_loader = DataLoader(dataset=data_train, batch_size=config.batch_size, shuffle=False)
-  dev_loader = DataLoader(dataset=data_dev, batch_size=config.batch_size, shuffle=False)
+  train_loader = DataLoader(dataset=data_train, batch_size=config['batch_size'], shuffle=False)
+  dev_loader = DataLoader(dataset=data_dev, batch_size=config['batch_size'], shuffle=False)
 
   
   #model
@@ -200,7 +190,7 @@ def make(config):
 
   # criterion and optimizer
   criterion = nn.BCEWithLogitsLoss()
-  optimizer = optim.Adam(model.parameters(), lr=config.learning_rate)
+  optimizer = optim.Adam(model.parameters(), lr=config['learning_rate'])
 
 
   return model, train_loader, dev_loader, criterion, optimizer
@@ -228,8 +218,7 @@ def binary_accuracy(y_pred, y_test):
 
 def train(model, train_loader, criterion, optimizer, config):
 
-  # Tell wandb to watch 
-  wandb.watch(model, criterion, log_freq=10)
+
 
   model.train()
   for epoch in range(1, config.epochs+1):
@@ -252,15 +241,10 @@ def train(model, train_loader, criterion, optimizer, config):
       epoch_loss += loss.item()
       epoch_acc += acc.item()
     print(f'Epoch {epoch}: | Loss: {epoch_loss/len(train_loader):.5f} | Acc: {epoch_acc/len(train_loader):.3f}')  
-    wandb.log({
-          "Epoch": epoch,
-          "Train Accuracy": epoch_acc/len(train_loader),
-          "Train Loss": epoch_loss/len(train_loader)})
-    torch.save(model.state_dict(), config.path_dataset+"model.pt")
+
+    torch.save(model.state_dict(), config['path_dataset']+"model.pt")
 
 def dev(model, dev_loader, log=True):
-
-
 
     model.eval()
     y_dev_list = []
@@ -287,7 +271,7 @@ def dev(model, dev_loader, log=True):
 
 
         if log:
-          wandb.log({"test_accuracy": correct / total})
+          print({"test_accuracy": correct / total})
 
     y_dev_list = [a.squeeze().tolist() for a in y_dev_list]
     
@@ -310,8 +294,6 @@ def test(model, test_loader):
             outputs = model(X_ngrams_batch, X_punct_batch)
             y_test_pred = torch.sigmoid(outputs)
            
-            #y_pred_tag = torch.round(y_test_pred)
-            #y_pred_list.extend(y_pred_tag.cpu().numpy())
             y_pred_list.extend(y_test_pred.cpu().numpy())
 
 

@@ -1,6 +1,5 @@
 import os
 import pandas as pd
-import wandb
 from model_large_dataset import model_pipeline, predict_model
 from vectorizers_large_dataset import vectorize_dataset, vectorize_predict
 from sklearn.model_selection import train_test_split
@@ -113,16 +112,10 @@ def train_model(epochs, batch_size, learning_rate=0.001):
 
 if __name__ == "__main__":
 
-    # Wandb Login
-    wandb.login()
-
-    #create_dataset(config)
-    #vectorize_dataset(config)
 
 
-
-    train_model(1, 368, 0.00005)
-    train_model(5, 368, 0.00005)
+    create_dataset(config)
+    vectorize_dataset(config)
     train_model(10, 368, 0.00005)
 
 
