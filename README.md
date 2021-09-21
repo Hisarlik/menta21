@@ -1,1 +1,1 @@
-# NEREL-HIPE
+# Authorship - Verification
