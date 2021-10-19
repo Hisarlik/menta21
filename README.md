@@ -13,7 +13,9 @@ Steps to replicate the results:
 
 1. Clone this repository
 2. Install dependencies:
+<pre><code>
     pip install -r requirements.txt
+</code></pre>
 3. For training purpose:
     python train_small_dataset.py 
 4. For test purpose:
