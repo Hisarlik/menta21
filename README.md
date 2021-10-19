@@ -9,7 +9,19 @@ Antonio Menta and Ana Garcia Serrano.  Authorship Verification with neural netwo
 
  
 
+Steps to replicate the results: 
+
+1. Clone this repository
+2. Install dependencies:
+    pip install -r requirements.txt
+3. For training purpose:
+    python train_small_dataset.py 
+4. For test purpose:
+    python predict_small_dataset.py
 
 
+# Data
+
+Download the dataset from https://pan.webis.de/data.html to data folder.
 
 
