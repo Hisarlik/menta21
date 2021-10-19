@@ -28,6 +28,7 @@ Same for larger version. Be carefull with memory issues.
 Download the dataset from https://pan.webis.de/data.html to data folder.
 
 # Citing
+<pre><code>
 @InProceedings{menta:2021,
   author =              {Menta, Antonio and Garcia-Serrano, Ana},
   booktitle =           {{CLEF 2021 Labs and Workshops, Notebook Papers}},
@@ -39,4 +40,4 @@ Download the dataset from https://pan.webis.de/data.html to data folder.
   url =                 {},
   year =                2021
 }
-
+</code></pre>
