@@ -13,13 +13,11 @@ Steps to replicate the results:
 
 1. Clone this repository
 2. Install dependencies:
-<pre><code>
-    pip install -r requirements.txt
-</code></pre>
+<pre><code>pip install -r requirements.txt</code></pre>
 3. For training purpose:
-    python train_small_dataset.py 
+<pre><code>python train_small_dataset.py</code></pre>
 4. For test purpose:
-    python predict_small_dataset.py
+<pre><code>python predict_small_dataset.py</code></pre>
 
 
 # Data
